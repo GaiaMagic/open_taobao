@@ -4,12 +4,12 @@ require 'tempfile'
 describe OpenTaobao do
  ENDPOINT = "http://gw.api.tbsandbox.com/router/rest"
 
-   before(:each) do
+  before(:each) do
     # @now = Time.parse('2012-10-29 23:30')
     # Time.stub(:now) { @now }
-    OpenTaobao.init_config('23059473', '2b2625b09e7537da71d38b838d159adf', 
-                        '61000084b671cd1c12857e37839b096e508038f1a44d7f22056231041',
-                       'http://gw.api.taobao.com/router/rest')
+    config = YAML.load(File.open("./config.yaml"))
+    puts "config is #{config}"
+    OpenTaobao.init_config(config['app_key'], config['secret'], config['session'], config['endpoint'])
   end
 
   # we only need to load config file here once for all test
@@ -92,130 +92,8 @@ describe OpenTaobao do
     OpenTaobao.query_string(options).should include("partner_id=top-apitools")
   end
 
-  it "should return url with endpoint" do
-    options = {
-      :timestamp  => '2011-07-01 13:52:03',
-      :method     => 'taobao.user.get',
-      :format     => 'xml',
-      :partner_id => 'top-apitools',
-      'nick'      => '商家测试帐号17',
-      'fields'    => 'nick,location.state,location.city'
-    }
-    OpenTaobao.url(options).should start_with(ENDPOINT)
-  end
-
-  it "should parse result data" do
-    data = '
-      {"item_get_response": {
-          "item": {
-            "item_imgs": {
-              "item_img": [
-              ]
-            }
-          }
-      }}
-    '
-
-    OpenTaobao.parse_result(data).should == {
-      "item_get_response" => {
-        'item' => {
-          "item_imgs" => { "item_img" => []}
-        }
-      }
-    }
-  end
-
-  it "should support get method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.get",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    OpenTaobao.get(params)['itemcats_get_response']['item_cats']['item_cat'].should be_a(Array)
-  end
-
-  it "should support get! method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.get",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    OpenTaobao.get!(params)['itemcats_get_response']['item_cats']['item_cat'].should be_a(Array)
-  end
-
-  it "should raise error by get! method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.no-method",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    expect {
-      OpenTaobao.get!(params)
-    }.to raise_error OpenTaobao::Error
-  end
-
-  it "should support post method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.get",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    OpenTaobao.post(params)['itemcats_get_response']['item_cats']['item_cat'].should be_a(Array)
-  end
-
-  it "should support post! method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.get",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    OpenTaobao.post!(params)['itemcats_get_response']['item_cats']['item_cat'].should be_a(Array)
-  end
-
-  it "should raise error by post! method" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.no-method",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    expect {
-      OpenTaobao.post!(params)
-    }.to raise_error OpenTaobao::Error
-  end
-
-  it "open_taobao error should be a json string" do
-    OpenTaobao.initialize_session
-    params = {
-      :method => "taobao.itemcats.no-method",
-      :fields => "cid,parent_id,name,is_parent",
-      :parent_cid => 0
-    }
-
-    begin
-      OpenTaobao.post!(params)
-    rescue OpenTaobao::Error => e
-      msg = MultiJson.decode(e.message)
-      msg.class.should == Hash
-    end
-  end
-
   it "item_add_request" do
-    OpenTaobao.init_config('23059473', '2b2625b09e7537da71d38b838d159adf', 
-                        '61000084b671cd1c12857e37839b096e508038f1a44d7f22056231041',
-                       'http://gw.api.taobao.com/router/rest')
-    item_params = {
+    params = {
       'num' => 10,
       'price' => 0.05,
       'type' => 'fixed',
@@ -231,10 +109,21 @@ describe OpenTaobao do
       'location.city' => '佛山',
       'image' => File.open("1.pic.jpg", "r").read
     }
-    response = OpenTaobao.item_add(item_params)
-    puts "The END --------------------------------------------------------"
+    response = OpenTaobao.item_add(params)
     puts response
+  end
 
+  it "item_sku_add_request" do
+    params = {
+      'num_iid' => '44487662987',
+      "properties" => "$票种:DDC",
+      "quantity" => 10,
+      "price" => 0.09,
+      "outer_id" => "7777",
+      "lang" => "zh_CN",
+    }
+    response = OpenTaobao.item_sku_add(params)
+    puts response
   end
 end
 

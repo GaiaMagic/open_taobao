@@ -35,11 +35,14 @@ module OpenTaobao
 
     @@attr_map = {
       'taobao.item.add' => {
-      'required' => Set.new(['num', 'price', 'type', 'stuff_status', 'title', 'desc',
-                            'cid', 'location.state', 'location.city']),
-                            'optional' => Set.new(['outer_id', 'locality_life.choose_logis', 'locality_life.merchant',
-                                                  'locality_life.expirydate', 'image'])
-    }
+        'required' => ['num', 'price', 'type', 'stuff_status', 'title', 'desc',
+                      'cid', 'location.state', 'location.city'],
+        'optional' => ['outer_id', 'locality_life.choose_logis', 'locality_life.merchant',
+                      'locality_life.expirydate', 'image']},
+      'taobao.item.sku.add' => {
+        'required' => ['num_iid', 'properties', 'quantity', 'price'],
+        'optional' => ['outer_id', 'item_price', 'lang', 'spec_id', 'sku_hd_length', 
+                      'sku_hd_height', 'sku_hd_lamp_quantity', 'ignorewarning']},
     }
 
     # Load a yml config, and initialize http session
@@ -79,8 +82,6 @@ module OpenTaobao
     # wrapped with secret_key
     def wrap_with_secret(s)
       ret = "#{@config['secret']}#{s}#{@config['secret']}"
-      puts "ret = [%s]" % ret
-      ret
     end
 
     # Return sorted request parameter by request key
@@ -159,10 +160,18 @@ module OpenTaobao
       response
     end
 
+    def item_sku_add(params)
+      method = 'taobao.item.sku.add'
+      final_params = prepare_params(method, params)
+      response = RestClient.get( prepare_url(final_params) )
+      j = MultiJson.decode(response.body)
+      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
+      return j
+    end
+
     def item_add(params)
-      puts "config is #{@config}"
-      item_add_params = special_params('taobao.item.add', params)
-      final_params = item_add_params.merge common_params('taobao.item.add') if nil != item_add_params
+      method = 'taobao.item.add'
+      final_params = prepare_params(method, params)
       if params.has_key?('image')
         image = final_params['image']
         final_params.delete('image')
@@ -179,7 +188,14 @@ module OpenTaobao
         })
         File.delete(filename)
       end
-      puts response.body
+      j = MultiJson.decode(response.body)
+      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
+      return j
+    end
+
+    def prepare_params(method, input_params)
+      tmp = special_params(method, input_params)
+      final_params = tmp.merge(common_params(method)) if nil != tmp
     end
 
     def common_params(method)
@@ -201,8 +217,7 @@ module OpenTaobao
         if input_params.has_key?(para)
           required_params[para] = input_params[para]
         else
-          puts "Miss #{para}"
-          return nil
+          raise Error.new("%s miss parameter %s" % [method, para])
         end
       end
       optional_params = {}
