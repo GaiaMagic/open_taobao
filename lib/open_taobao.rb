@@ -2,6 +2,7 @@ require 'digest'
 require 'faraday'
 require 'multi_json'
 require 'yaml'
+require 'rest_client'
 
 require 'open_taobao/version'
 require 'open_taobao/hash_ext'

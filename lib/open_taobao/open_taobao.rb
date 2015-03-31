@@ -21,6 +21,8 @@
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #++
 
+require 'rest_client'
+
 module OpenTaobao
   REQUEST_TIMEOUT = 10
   API_VERSION = '2.0'
@@ -31,6 +33,15 @@ module OpenTaobao
   class << self
     attr_accessor :config, :session
 
+    @@attr_map = {
+      'taobao.item.add' => {
+      'required' => Set.new(['num', 'price', 'type', 'stuff_status', 'title', 'desc',
+                            'cid', 'location.state', 'location.city']),
+                            'optional' => Set.new(['outer_id', 'locality_life.choose_logis', 'locality_life.merchant',
+                                                  'locality_life.expirydate', 'image'])
+    }
+    }
+
     # Load a yml config, and initialize http session
     # yml config file content should be:
     #
@@ -38,17 +49,14 @@ module OpenTaobao
     #   secret_key: "YOUR SECRET KEY"
     #   endpoint:   "TAOBAO GATEWAY API URL"
     #
-    def load(config_file)
-      @config = YAML.load_file(config_file)
-      @config = config[Rails.env] if defined? Rails
-      check_config_and_export_to_env
-      initialize_session
-    end
-
-    # check config and export all setting to ENV
-    def check_config_and_export_to_env
-      check_config
-      export_config_to_env
+    def init_config(app_key, secret, session, endpoint, tmp_file_path = '/tmp/')
+      @config = {
+        'app_key' => app_key,
+        'secret' => secret,
+        'session' => session,
+        'endpoint' => endpoint,
+        'tmp_file_path' => tmp_file_path
+      }
     end
 
     # check config
@@ -56,38 +64,11 @@ module OpenTaobao
     # raise exception if config key missed in YAML file
     def check_config
       list = []
-      %w(app_key secret_key endpoint).map do |k|
-        list << k unless config.has_key? k
+      %w(app_key secret endpoint).map do |k|
+        list << k unless @config.has_key? k
       end
 
       raise "[#{list.join(', ')}] not included in your yaml file." unless list.empty?
-    end
-
-    # setting ENV variables from config
-    #
-    # ENV variables:
-    # 
-    #   TAOBAO_API_KEY    -> config['app_key']
-    #   TAOBAO_SECRET_KEY -> config['secret_key']
-    #   TAOBAO_ENDPOINT   -> config['endpoint']
-    #   TAOBAOKE_PID      -> config['pid']
-    def export_config_to_env
-      ENV['TAOBAO_API_KEY']    = config['app_key']
-      ENV['TAOBAO_SECRET_KEY'] = config['secret_key']
-      ENV['TAOBAO_ENDPOINT']   = config['endpoint']
-      ENV['TAOBAOKE_PID']      = config['pid']  # for compatible with v0.0.3
-    end
-
-    # Initialize http sesison
-    def initialize_session
-      @session = Faraday.new :url => config['endpoint'] do |builder|
-        begin
-          require 'patron'
-          builder.adapter :patron
-        rescue LoadError
-          builder.adapter :net_http
-        end
-      end
     end
 
     # Return request signature with MD5 signature method
@@ -97,7 +78,9 @@ module OpenTaobao
 
     # wrapped with secret_key
     def wrap_with_secret(s)
-      "#{config['secret_key']}#{s}#{config['secret_key']}"
+      ret = "#{@config['secret']}#{s}#{@config['secret']}"
+      puts "ret = [%s]" % ret
+      ret
     end
 
     # Return sorted request parameter by request key
@@ -141,7 +124,7 @@ module OpenTaobao
 
     # Return full url with signature.
     def url(params)
-      "%s%s" % [config['endpoint'], query_string(params)]
+      "%s%s" % [@config['endpoint'], query_string(params)]
     end
 
     # Return a parsed JSON object.
@@ -175,6 +158,78 @@ module OpenTaobao
       raise Error.new(MultiJson.encode response['error_response']) if response.has_key?('error_response')
       response
     end
+
+    def item_add(params)
+      puts "config is #{@config}"
+      item_add_params = special_params('taobao.item.add', params)
+      final_params = item_add_params.merge common_params('taobao.item.add') if nil != item_add_params
+      if params.has_key?('image')
+        image = final_params['image']
+        final_params.delete('image')
+      else
+        image = nil
+      end
+      full_url = prepare_url(final_params) 
+      if nil == image
+        response = RestClient.get(full_url)
+      else
+        filename = random_file_name(final_params)
+        response = RestClient.post(full_url, {
+          :upload => {image: prepare_file(filename, image)}
+        })
+        File.delete(filename)
+      end
+      puts response.body
+    end
+
+    def common_params(method)
+      {
+        'app_key' => @config['app_key'],
+        'secret' => @config['secret'],
+        'session' => @config['session'],
+        'format' => 'json',
+        'v' => API_VERSION,
+        'sign_method' => 'md5',
+        'timestamp' => (Time.now.to_f * 1000).to_i.to_s,
+        'method' => method,
+      }
+    end
+
+    def special_params(method, input_params)
+      required_params = {}
+      @@attr_map[method]['required'].each do |para|
+        if input_params.has_key?(para)
+          required_params[para] = input_params[para]
+        else
+          puts "Miss #{para}"
+          return nil
+        end
+      end
+      optional_params = {}
+      @@attr_map[method]['optional'].each do |para|
+        optional_params[para] = input_params[para] if input_params.has_key?(para)
+      end
+      return required_params.merge optional_params
+    end
+
+    def prepare_url(final_params)
+      final_params['sign'] = sign(final_params)
+      query = final_params.map {|k, v| "#{k}=#{v}"}.join('&')
+      full_url = "#{config['endpoint']}?#{URI.escape(query)}"
+    end
+
+    def prepare_file(filename, content)
+      f = File.open(filename, "wb")
+      f.write(content)
+      f.close
+      File.new(filename, "rb")
+    end
+
+    def random_file_name(final_params)
+        "%s_%s_%d" % [final_params['timestamp'], final_params['method'], rand(10000)]
+    end
+
+
+
   end
 end
-

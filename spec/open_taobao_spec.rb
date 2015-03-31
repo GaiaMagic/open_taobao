@@ -1,26 +1,15 @@
 # encoding: utf-8
 require 'spec_helper'
 require 'tempfile'
-
 describe OpenTaobao do
  ENDPOINT = "http://gw.api.tbsandbox.com/router/rest"
 
-  let(:config_file) do
-    file = Tempfile.new 'taobao.yml'
-    File.open file.path, 'w+' do |f|
-      f.write <<-EOS.gsub(/^ +/, '')
-        app_key:    'test'
-        secret_key: 'test'
-        endpoint:   '#{ENDPOINT}'
-      EOS
-    end
-    file
-  end
-
-  before(:each) do
-    @now = Time.parse('2012-10-29 23:30')
-    Time.stub(:now) { @now }
-    OpenTaobao.load(config_file.path)
+   before(:each) do
+    # @now = Time.parse('2012-10-29 23:30')
+    # Time.stub(:now) { @now }
+    OpenTaobao.init_config('23059473', '2b2625b09e7537da71d38b838d159adf', 
+                        '61000084b671cd1c12857e37839b096e508038f1a44d7f22056231041',
+                       'http://gw.api.taobao.com/router/rest')
   end
 
   # we only need to load config file here once for all test
@@ -220,6 +209,32 @@ describe OpenTaobao do
       msg = MultiJson.decode(e.message)
       msg.class.should == Hash
     end
+  end
+
+  it "item_add_request" do
+    OpenTaobao.init_config('23059473', '2b2625b09e7537da71d38b838d159adf', 
+                        '61000084b671cd1c12857e37839b096e508038f1a44d7f22056231041',
+                       'http://gw.api.taobao.com/router/rest')
+    item_params = {
+      'num' => 10,
+      'price' => 0.05,
+      'type' => 'fixed',
+      'stuff_status' => 'new',
+      'title' => 'Can',
+      'desc' => "Come on baby, tttt",
+      'cid' => '123606001',
+      'outer_id' => '12345',
+      'locality_life.choose_logis' => 1,
+      'locality_life.merchant' => "2056231041:有演出",
+      'locality_life.expirydate'  => "2015-04-02",
+      'location.state' => '广东',
+      'location.city' => '佛山',
+      'image' => File.open("1.pic.jpg", "r").read
+    }
+    response = OpenTaobao.item_add(item_params)
+    puts "The END --------------------------------------------------------"
+    puts response
+
   end
 end
 
