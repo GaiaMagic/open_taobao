@@ -183,9 +183,14 @@ module OpenTaobao
         response = RestClient.get(full_url)
       else
         filename = random_file_name(final_params)
+        response = RestClient::Request.execute(:method => :post, :url => full_url, 
+                                    :payload => {:upload => {image: prepare_file(filename, image)}}, 
+                                      :timeout => 1)
+=begin  
         response = RestClient.post(full_url, {
           :upload => {image: prepare_file(filename, image)}
         })
+=end
         File.delete(filename)
       end
       j = MultiJson.decode(response.body)

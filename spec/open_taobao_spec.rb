@@ -104,7 +104,7 @@ describe OpenTaobao do
       'outer_id' => '12345',
       'locality_life.choose_logis' => 1,
       'locality_life.merchant' => "2056231041:有演出",
-      'locality_life.expirydate'  => "2015-04-02",
+      'locality_life.expirydate'  => "2015-11-11",
       'location.state' => '广东',
       'location.city' => '佛山',
       'image' => File.open("1.pic.jpg", "r").read
