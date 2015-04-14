@@ -28,38 +28,28 @@ module OpenTaobao
   API_VERSION = '2.0'
   USER_AGENT = "open_taobao-v#{VERSION}"
 
+  SPECIAL_METHOD = {
+    'taobao.vmarket.eticket.qrcode.upload' => :vmarket_eticket_qrcode_upload,
+    'taobao.item.add' => :item_add,
+  }
+
   class Error < StandardError; end
 
   class << self
     attr_accessor :config, :session
-
-    @@attr_map = {
-      'taobao.item.add' => {
-        'required' => ['num', 'price', 'type', 'stuff_status', 'title', 'desc',
-                      'cid', 'location.state', 'location.city'],
-        'optional' => ['outer_id', 'locality_life.choose_logis', 'locality_life.merchant',
-                      'locality_life.expirydate', 'image']},
-      'taobao.item.sku.add' => {
-        'required' => ['num_iid', 'properties', 'quantity', 'price'],
-        'optional' => ['outer_id', 'item_price', 'lang', 'spec_id', 'sku_hd_length', 
-                      'sku_hd_height', 'sku_hd_lamp_quantity', 'ignorewarning']},
-    }
-
-    # Load a yml config, and initialize http session
-    # yml config file content should be:
-    #
-    #   app_key:    "YOUR APP KEY"
-    #   secret_key: "YOUR SECRET KEY"
-    #   endpoint:   "TAOBAO GATEWAY API URL"
-    #
-    def init_config(app_key, secret, session, endpoint, tmp_file_path = '/tmp/')
+    
+    def init_config(config_file, parameters_file)
+      conf = YAML.load(File.open(config_file))
       @config = {
-        'app_key' => app_key,
-        'secret' => secret,
-        'session' => session,
-        'endpoint' => endpoint,
-        'tmp_file_path' => tmp_file_path
+        'app_key' => conf['app_key'],
+        'secret' => conf['secret'],
+        'session' => conf['session'],
+        'endpoint' => conf['endpoint'],
       }
+      @config['tmp_file_path'] = (nil == conf['tmp_file_path']) ? '/tmp/' : conf['tmp_file_path']
+      puts "it is #{@config}"
+      yaml = YAML::load( File.new(parameters_file) )
+      @attr_map = yaml['parameters']
     end
 
     # check config
@@ -160,15 +150,6 @@ module OpenTaobao
       response
     end
 
-    def item_sku_add(params)
-      method = 'taobao.item.sku.add'
-      final_params = prepare_params(method, params)
-      response = RestClient.get( prepare_url(final_params) )
-      j = MultiJson.decode(response.body)
-      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
-      return j
-    end
-
     def item_add(params)
       method = 'taobao.item.add'
       final_params = prepare_params(method, params)
@@ -186,13 +167,50 @@ module OpenTaobao
         response = RestClient::Request.execute(:method => :post, :url => full_url, 
                                     :payload => {:upload => {image: prepare_file(filename, image)}}, 
                                       :timeout => 1)
-=begin  
-        response = RestClient.post(full_url, {
-          :upload => {image: prepare_file(filename, image)}
-        })
-=end
         File.delete(filename)
       end
+      j = MultiJson.decode(response.body)
+      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
+      return j
+    end
+
+    def request(method_name, params)
+      if SPECIAL_METHOD.has_key?(method_name)
+        return method(@special_method[method_name]).call(params)
+      else
+        if @attr_map.has_key?(method_name)
+          return method_request(method_name, params)
+        else
+          raise "Unknow method"
+        end
+      end
+    end
+      
+
+    def vmarket_eticket_qrcode_upload(params)
+      # just post it
+      method = 'taobao.vmarket.eticket.qrcode.upload'
+      if not params.has_key?('img_bytes')
+        raise "Miss img_bytes"
+      end
+      image = params['img_bytes']
+      params.delete('img_bytes')
+      final_params = prepare_params(method, params)
+      full_url = prepare_url(final_params) 
+      filename = random_file_name(final_params)
+      response = RestClient::Request.execute(:method => :post, :url => full_url, 
+                                  :payload => {img_bytes: prepare_file(filename, image)}, 
+                                    :timeout => 5)
+      File.delete(filename)
+      j = MultiJson.decode(response.body)
+      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
+      return j
+    end
+
+
+    def method_request(method, params)
+      final_params = prepare_params(method, params)
+      response = RestClient.get( prepare_url(final_params) )
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
       return j
@@ -218,7 +236,7 @@ module OpenTaobao
 
     def special_params(method, input_params)
       required_params = {}
-      @@attr_map[method]['required'].each do |para|
+      @attr_map[method]['required'].each do |para|
         if input_params.has_key?(para)
           required_params[para] = input_params[para]
         else
@@ -226,7 +244,7 @@ module OpenTaobao
         end
       end
       optional_params = {}
-      @@attr_map[method]['optional'].each do |para|
+      @attr_map[method]['optional'].each do |para|
         optional_params[para] = input_params[para] if input_params.has_key?(para)
       end
       return required_params.merge optional_params
@@ -235,6 +253,7 @@ module OpenTaobao
     def prepare_url(final_params)
       final_params['sign'] = sign(final_params)
       query = final_params.map {|k, v| "#{k}=#{v}"}.join('&')
+      puts "conf is #{config['endpoint']}, query is #{query}"
       full_url = "#{config['endpoint']}?#{URI.escape(query)}"
     end
 

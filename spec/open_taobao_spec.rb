@@ -7,9 +7,12 @@ describe OpenTaobao do
   before(:each) do
     # @now = Time.parse('2012-10-29 23:30')
     # Time.stub(:now) { @now }
-    config = YAML.load(File.open("./config.yaml"))
+=begin
+    config = YAML.load(File.open("./secret.yaml"))
     puts "config is #{config}"
-    OpenTaobao.init_config(config['app_key'], config['secret'], config['session'], config['endpoint'])
+    OpenTaobao.init_config(app_key: config['app_key'], secret: config['secret'], session: config['session'], endpoint: config['endpoint'], parameter_config_file: "./config.yaml")
+=end
+    OpenTaobao.init_config('./secret.yaml', './config.yaml')
   end
 
   # we only need to load config file here once for all test
@@ -125,36 +128,46 @@ describe OpenTaobao do
     response = OpenTaobao.item_sku_add(params)
     puts response
   end
-end
 
-# OpenTaobao.load(File.expand_path('../taobao.yml',__FILE__))
-# 
-# def pretty(json)
-#   puts JSON.pretty_generate(json)
-# end
-# 
-# params = {
-#   :method => "taobao.itemcats.get",
-#   :fields => "cid,parent_id,name,is_parent",
-#   :parent_cid => 0
-# }
-# 
-# pretty(OpenTaobao.get(params))
-# 
-# params = {
-#   :method => "taobao.taobaoke.items.get",
-#   :fields => "num_iid,title,nick,pic_url,price,click_url, commission,commission_num,volume",
-#   :cid => 30, # 男装
-#   :pid => OpenTaobao::PID
-# }
-# 
-# pretty(OpenTaobao.get(params))
-# 
-# params = {
-#   :method => "taobao.item.get",
-#   :fields => "prop_img.url,item_img.url,nick",
-#   :num_iid => 19276752117
-# }
-# 
-# pretty(OpenTaobao.get(params))
-# 
+=begin
+  it "vmarket_eticket_consume" do
+    params = {
+      'order_id' = 
+    }
+  end
+=end
+
+  it "vmarket_eticket_qrcode_upload" do
+    params = {
+      'img_bytes' => File.open("ff.png", "r").read,
+      'code_merchant_id' => '2056231041',
+    }
+    j = OpenTaobao.vmarket_eticket_qrcode_upload(params)
+    puts j
+  end
+
+  it "vmarket_eticket_send" do
+    params = {
+      'order_id' => '922705003187153',
+      'verify_codes' => '111:1',
+      'token' => '8e11b544627bbf7e6ad82ff888287625',
+      'codemerchant_id' => '2056231041',
+      'qr_images' => 'TB143XdHFXXXXb.XVXXXXXXXXXX.png"',
+    }
+    j = OpenTaobao.request('taobao.vmarket.eticket.send', params)
+    puts j
+  end
+
+  it "vmarket_eticket_consume" do
+    params = {
+      'order_id' => '922705003187153',
+      'verify_code' => '111',
+      'consume_num' => '1',
+      'token' => '8e11b544627bbf7e6ad82ff888287625',
+    }
+    j = OpenTaobao.request('taobao.vmarket.eticket.consume', params)
+    puts j
+  end
+
+end
+ 
