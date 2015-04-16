@@ -46,7 +46,6 @@ module OpenTaobao
         'session' => session,
       }
       @config['tmp_file_path'] = tmp_file_path
-      yaml = YAML::load( File.new("./lib/open_taobao/parameters.yml") )
     end
 
     def set_config(new_config)
