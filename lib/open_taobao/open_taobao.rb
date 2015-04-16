@@ -47,7 +47,6 @@ module OpenTaobao
       }
       @config['tmp_file_path'] = tmp_file_path
       yaml = YAML::load( File.new("./lib/open_taobao/parameters.yml") )
-      PARAMETERS = PARAMETERS
     end
 
     def set_config(new_config)
@@ -58,9 +57,6 @@ module OpenTaobao
       end
     end
 
-    # check config
-    #
-    # raise exception if config key missed in YAML file
     def check_config
       list = []
       %w(app_key secret endpoint).map do |k|
