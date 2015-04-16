@@ -5,48 +5,18 @@ describe OpenTaobao do
  ENDPOINT = "http://gw.api.tbsandbox.com/router/rest"
 
   before(:each) do
-    # @now = Time.parse('2012-10-29 23:30')
-    # Time.stub(:now) { @now }
-=begin
-    config = YAML.load(File.open("./secret.yaml"))
-    puts "config is #{config}"
-    OpenTaobao.init_config(app_key: config['app_key'], secret: config['secret'], session: config['session'], endpoint: config['endpoint'], parameter_config_file: "./config.yaml")
-=end
-    OpenTaobao.init_config('./secret.yaml', './config.yaml')
+    OpenTaobao.init('test_key', 'test_secret', ENDPOINT)
   end
 
   # we only need to load config file here once for all test
   it "should load config file" do
-    OpenTaobao.config.should == {
-      'app_key'    => 'test',
-      'secret_key' => 'test',
-      'endpoint'   => "http://gw.api.tbsandbox.com/router/rest"
-    }
-  end
-
-  it "should raise exception if config yaml does not include correct keys" do
-    OpenTaobao.config = {
-      'secret_key' => 'test',
-      'endpoint'   => "http://gw.api.tbsandbox.com/router/rest"
-    }
-
-    expect {
-      OpenTaobao.check_config
-    }.to raise_error('[app_key] not included in your yaml file.')
-  end
-
-  it "should merge with default options" do
-    options = {:foo => 'foo', :bar => 'bar'}
-    OpenTaobao.full_options(options).should ==
-    {
-      :foo         => 'foo',
-      :bar         => 'bar',
-      :timestamp   => @now.strftime("%F %T"),
-      :v           => '2.0',
-      :format      => :json,
-      :sign_method => :md5,
-      :app_key     => 'test'
-    }
+    expect(OpenTaobao.config).to eq( {
+      'app_key'    => 'test_key',
+      'secret' => 'test_secret',
+      'endpoint'   => ENDPOINT,
+      'session' => nil,
+      'tmp_file_path' => '/tmp/',
+    })
   end
 
   # ref: http://open.taobao.com/doc/detail.htm?spm=0.0.0.30.iamImZ&id=111

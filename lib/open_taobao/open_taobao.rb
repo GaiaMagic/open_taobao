@@ -38,18 +38,24 @@ module OpenTaobao
   class << self
     attr_accessor :config, :session
     
-    def init_config(config_file, parameters_file)
-      conf = YAML.load(File.open(config_file))
+    def init(app_key, secret, endpoint, session: nil, tmp_file_path: '/tmp/' )
       @config = {
-        'app_key' => conf['app_key'],
-        'secret' => conf['secret'],
-        'session' => conf['session'],
-        'endpoint' => conf['endpoint'],
+        'app_key' => app_key,
+        'secret' => secret,
+        'endpoint' => endpoint,
+        'session' => session,
       }
-      @config['tmp_file_path'] = (nil == conf['tmp_file_path']) ? '/tmp/' : conf['tmp_file_path']
-      puts "it is #{@config}"
-      yaml = YAML::load( File.new(parameters_file) )
-      @attr_map = yaml['parameters']
+      @config['tmp_file_path'] = tmp_file_path
+      yaml = YAML::load( File.new("./lib/open_taobao/parameters.yml") )
+      PARAMETERS = PARAMETERS
+    end
+
+    def set_config(new_config)
+      new_config.each do |k,v|
+        if @config.has_key?(k)
+          @config[k] = v
+        end
+      end
     end
 
     # check config
@@ -178,7 +184,7 @@ module OpenTaobao
       if SPECIAL_METHOD.has_key?(method_name)
         return method(@special_method[method_name]).call(params)
       else
-        if @attr_map.has_key?(method_name)
+        if PARAMETERS.has_key?(method_name)
           return method_request(method_name, params)
         else
           raise "Unknow method"
@@ -236,7 +242,7 @@ module OpenTaobao
 
     def special_params(method, input_params)
       required_params = {}
-      @attr_map[method]['required'].each do |para|
+      PARAMETERS[method]['required'].each do |para|
         if input_params.has_key?(para)
           required_params[para] = input_params[para]
         else
@@ -244,7 +250,7 @@ module OpenTaobao
         end
       end
       optional_params = {}
-      @attr_map[method]['optional'].each do |para|
+      PARAMETERS[method]['optional'].each do |para|
         optional_params[para] = input_params[para] if input_params.has_key?(para)
       end
       return required_params.merge optional_params
