@@ -254,7 +254,6 @@ module OpenTaobao
     def prepare_url(final_params)
       final_params['sign'] = sign(final_params)
       query = final_params.map {|k, v| "#{k}=#{v}"}.join('&')
-      puts "conf is #{config['endpoint']}, query is #{query}"
       full_url = "#{config['endpoint']}?#{URI.escape(query)}"
     end
 
