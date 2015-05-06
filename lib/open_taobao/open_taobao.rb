@@ -31,6 +31,7 @@ module OpenTaobao
   SPECIAL_METHOD = {
     'taobao.vmarket.eticket.qrcode.upload' => :vmarket_eticket_qrcode_upload,
     'taobao.item.add' => :item_add,
+    'taobao.item.img.upload' => :item_img_upload
   }
 
   class Error < StandardError; end
@@ -150,6 +151,22 @@ module OpenTaobao
       raise Error.new(MultiJson.encode response['error_response']) if response.has_key?('error_response')
       response
     end
+    
+    def item_img_upload(params)
+      method = 'taobao.item.img.upload'
+      image = params.delete('image')
+      final_params = prepare_params(method, params)
+      full_url = prepare_url(final_params) 
+      filename = random_file_name(final_params)
+      response = RestClient::Request.execute(:method => :post, :url => full_url, 
+                                             :payload => {:upload => {image: prepare_file(filename, image)}}, 
+                                             :timeout => 1)
+      File.delete(filename)
+      j = MultiJson.decode(response.body)
+      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
+      return j
+
+    end
 
     def item_add(params)
       method = 'taobao.item.add'
@@ -177,7 +194,7 @@ module OpenTaobao
 
     def request(method_name, params)
       if SPECIAL_METHOD.has_key?(method_name)
-        return method(@special_method[method_name]).call(params)
+        return method(SPECIAL_METHOD[method_name]).call(params)
       else
         if PARAMETERS.has_key?(method_name)
           return method_request(method_name, params)

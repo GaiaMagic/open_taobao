@@ -139,5 +139,14 @@ describe OpenTaobao do
     puts j
   end
 
+  it "item_img_upload" do
+    params = {
+      'num_iid' => '45264977179',
+      'image' => File.open("1.pic.jpg", "r").read
+    }
+    j = OpenTaobao.request('taobao.item.img.upload', params)
+    puts j
+  end
+
 end
  
