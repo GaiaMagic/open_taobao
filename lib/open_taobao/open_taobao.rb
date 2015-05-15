@@ -30,7 +30,6 @@ module OpenTaobao
 
   SPECIAL_METHOD = {
     'taobao.vmarket.eticket.qrcode.upload' => :vmarket_eticket_qrcode_upload,
-    'taobao.item.add' => :item_add,
     'taobao.item.img.upload' => :item_img_upload
   }
 
@@ -168,30 +167,6 @@ module OpenTaobao
 
     end
 
-    def item_add(params)
-      method = 'taobao.item.add'
-      final_params = prepare_params(method, params)
-      if params.has_key?('image')
-        image = final_params['image']
-        final_params.delete('image')
-      else
-        image = nil
-      end
-      full_url = prepare_url(final_params) 
-      if nil == image
-        response = RestClient.get(full_url)
-      else
-        filename = random_file_name(final_params)
-        response = RestClient::Request.execute(:method => :post, :url => full_url, 
-                                    :payload => {:upload => {image: prepare_file(filename, image)}}, 
-                                      :timeout => 1)
-        File.delete(filename)
-      end
-      j = MultiJson.decode(response.body)
-      raise Error.new( j['error_response'] ) if j.has_key?('error_response')
-      return j
-    end
-
     def request(method_name, params)
       if SPECIAL_METHOD.has_key?(method_name)
         return method(SPECIAL_METHOD[method_name]).call(params)
@@ -225,13 +200,26 @@ module OpenTaobao
       return j
     end
 
-
     def method_request(method, params)
       final_params = prepare_params(method, params)
-      response = RestClient.get( prepare_url(final_params) )
+      full_url = part_url(final_params)
+      response = RestClient::Request.execute(:method => :post, :url => full_url, 
+                                    :payload => final_params, :timeout => 5)
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
       return j
+    end
+
+    def part_url(final_params)
+      query_parameters = %w[format timestamp app_key session sign_method v method]
+      query_params = {}
+      query_params['sign'] = sign(final_params)
+      query_parameters.each do |key|
+        raise "Missing #{key} for url's query" if not final_params.has_key?(key)
+        query_params[key] = final_params.delete(key)
+      end
+      query = query_params.map {|k, v| "#{k}=#{v}"}.join('&')
+      return "#{config['endpoint']}?#{URI.escape(query)}"
     end
 
     def prepare_params(method, input_params)
