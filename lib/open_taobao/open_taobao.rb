@@ -22,6 +22,7 @@
 #++
 
 require 'rest_client'
+require 'net/http/post/multipart'
 
 module OpenTaobao
   REQUEST_TIMEOUT = 10
@@ -155,11 +156,14 @@ module OpenTaobao
       method = 'taobao.item.img.upload'
       image = params.delete('image')
       final_params = prepare_params(method, params)
+      puts final_params
       full_url = prepare_url(final_params) 
+      puts final_params
+      puts full_url
       filename = random_file_name(final_params)
       response = RestClient::Request.execute(:method => :post, :url => full_url, 
-                                             :payload => {:upload => {image: prepare_file(filename, image)}}, 
-                                             :timeout => 1)
+                                             :payload => {image: prepare_file(filename, image)}, 
+                                             :timeout => 3)
       File.delete(filename)
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
@@ -235,7 +239,7 @@ module OpenTaobao
         'format' => 'json',
         'v' => API_VERSION,
         'sign_method' => 'md5',
-        'timestamp' => (Time.now.to_f * 1000).to_i.to_s,
+        'timestamp' => Time.now.strftime("%F %T"),
         'method' => method,
       }
     end
@@ -270,7 +274,7 @@ module OpenTaobao
     end
 
     def random_file_name(final_params)
-        "%s_%s_%d" % [final_params['timestamp'], final_params['method'], rand(10000)]
+        "%s_%s_%d.jpg" % [final_params['timestamp'], final_params['method'], rand(10000)]
     end
 
 
