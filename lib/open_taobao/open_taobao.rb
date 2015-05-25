@@ -39,12 +39,13 @@ module OpenTaobao
   class << self
     attr_accessor :config, :session
     
-    def init(app_key, secret, endpoint, session: nil, tmp_file_path: '/tmp/' )
+    def init(app_key, secret, endpoint, session: nil, tmp_file_path: '/tmp/', timeout: 5 )
       @config = {
         'app_key' => app_key,
         'secret' => secret,
         'endpoint' => endpoint,
         'session' => session,
+        'timeout' => timeout,
       }
       @config['tmp_file_path'] = tmp_file_path
     end
@@ -163,7 +164,7 @@ module OpenTaobao
       filename = random_file_name(final_params)
       response = RestClient::Request.execute(:method => :post, :url => full_url, 
                                              :payload => {image: prepare_file(filename, image)}, 
-                                             :timeout => 3)
+                                             :timeout => @config['timeout'])
       File.delete(filename)
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
@@ -197,7 +198,7 @@ module OpenTaobao
       filename = random_file_name(final_params)
       response = RestClient::Request.execute(:method => :post, :url => full_url, 
                                   :payload => {img_bytes: prepare_file(filename, image)}, 
-                                    :timeout => 5)
+                                    :timeout => @config['timeout'])
       File.delete(filename)
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
@@ -208,7 +209,7 @@ module OpenTaobao
       final_params = prepare_params(method, params)
       full_url = part_url(final_params)
       response = RestClient::Request.execute(:method => :post, :url => full_url, 
-                                    :payload => final_params, :timeout => 5)
+                                    :payload => final_params, :timeout => @config['timeout'])
       j = MultiJson.decode(response.body)
       raise Error.new( j['error_response'] ) if j.has_key?('error_response')
       return j
