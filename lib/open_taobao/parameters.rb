@@ -2,7 +2,8 @@ module OpenTaobao
   PARAMETERS = {
     "taobao.item.add"=>{
       "required"=>["num", "price", "type", "stuff_status", "title", "desc", "cid", "location.state", "location.city"], 
-      "optional"=>["outer_id", "locality_life.choose_logis", "locality_life.merchant", "locality_life.expirydate", "approve_status"]}, 
+      "optional"=>["outer_id", "locality_life.choose_logis", "locality_life.merchant", "locality_life.expirydate", "approve_status",
+                   "newprepay"]}, 
     "taobao.item.update"=>{
       "required"=>["num_iid"],
       "optional"=>["cid", "props", "num", "price", "title", "desc", 'location.state', 'location.city', 'post_fee', 'express_fee',
@@ -10,7 +11,7 @@ module OpenTaobao
     'sku_prices', 'sku_properties', 'seller_cids', 'postage_id', 'outer_id', 'product_id', 'pic_path', 'auto_fill', 'sku_outer_ids',
     'is_taobao', 'is_ex', 'is_3D', 'is_replace_sku', 'input_str', 'lang', 'has_discount', 'has_showcase', 'approve_status', 
     'freight_payer', 'valid_thru', 'has_invoice', 'has_warranty', 'after_sale_id', 'sell_promise', 'cod_postage_id', 'is_lightning_consignment',
-    'weight', 'is_xinpin', 'sub_stock']},
+    'weight', 'is_xinpin', 'sub_stock', 'newprepay', "locality_life.choose_logis" ]},
     "taobao.item.img.upload"=>{
       "required"=>["num_iid"],
       "optional"=>["id", "position", "is_major"]},
