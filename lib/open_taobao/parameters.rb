@@ -12,6 +12,11 @@ module OpenTaobao
     'is_taobao', 'is_ex', 'is_3D', 'is_replace_sku', 'input_str', 'lang', 'has_discount', 'has_showcase', 'approve_status', 
     'freight_payer', 'valid_thru', 'has_invoice', 'has_warranty', 'after_sale_id', 'sell_promise', 'cod_postage_id', 'is_lightning_consignment',
     'weight', 'is_xinpin', 'sub_stock', 'newprepay', "locality_life.choose_logis" ]},
+
+    "taobao.item.seller.get"=>{
+      "required"=>["num_iid", 'fields'],
+      "optional"=>[]},
+
     "taobao.item.img.upload"=>{
       "required"=>["num_iid"],
       "optional"=>["id", "position", "is_major"]},

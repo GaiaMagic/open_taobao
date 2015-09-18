@@ -148,5 +148,14 @@ describe OpenTaobao do
     puts j
   end
 
+  it "taobao.item.seller.get" do 
+    params = {
+      'num_iid' => '520706487106',
+      'fields' => 'approve_status, title'
+    }
+    j = OpenTaobao.request('taobao.item.seller.get', params)
+    puts j
+  end
+
 end
  
